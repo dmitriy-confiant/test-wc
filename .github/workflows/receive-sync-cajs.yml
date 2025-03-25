@@ -34,7 +34,10 @@ jobs:
 
           for filename in $(jq -r 'keys[]' file_data.json); do
             echo "Processing file: $filename"
-            jq -r ".[\\"$filename\\"]" file_data.json | base64 -d > "cef_client/cajs/$filename"
+
+            CONTENT=$(jq -r --arg filename "$filename" '.[$filename]' file_data.json)
+            echo "$CONTENT" | base64 -d > "cef_client/cajs/$filename"
+
             ls -la "cef_client/cajs/$filename"
             echo "Created $filename with $(wc -c < "cef_client/cajs/$filename") bytes"
           done
