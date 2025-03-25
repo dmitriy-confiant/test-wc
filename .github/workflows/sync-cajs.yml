@@ -16,6 +16,14 @@ on:
 jobs:
   check-and-trigger:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      checks: write
+      id-token: write
+      contents: read
+      pull-requests: write
+      statuses: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
