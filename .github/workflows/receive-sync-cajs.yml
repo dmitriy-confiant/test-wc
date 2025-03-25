@@ -19,16 +19,24 @@ jobs:
       - name: Create sync branch
         run: |
           BRANCH_NAME="sync/puppet-master-${GITHUB_RUN_ID}"
+          git checkout -b $BRANCH_NAME
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
       - name: Process changed files
         run: |
-          echo '${{ github.event.client_payload.file_data }}' > file_data.json
+          echo '${{ toJSON(github.event.client_payload.file_data) }}' > file_data.json
 
-          for filename in $(echo '${{ github.event.client_payload.file_data }}' | jq -r 'keys[]'); do
-            CONTENT=$(jq -r ".[\"$filename\"]" file_data.json)
-            echo "$CONTENT" | base64 -d > "cef_client/cajs/$filename"
-            echo "Processed file: $filename"
+          echo "File data JSON structure:"
+          cat file_data.json | jq '.'
+
+          echo "Files to process:"
+          jq -r 'keys[]' file_data.json
+
+          for filename in $(jq -r 'keys[]' file_data.json); do
+            echo "Processing file: $filename"
+            jq -r ".[\\"$filename\\"]" file_data.json | base64 -d > "cef_client/cajs/$filename"
+            ls -la "cef_client/cajs/$filename"
+            echo "Created $filename with $(wc -c < "cef_client/cajs/$filename") bytes"
           done
 
       - name: Check for changes
@@ -67,7 +75,7 @@ jobs:
           body: |
             This PR syncs JavaScript files from the puppet-master repository.
 
-            These changes originated from ${{ github.event.client_payload.source_type == 'pr' && format('PR #{0}', github.event.client_payload.source_number) || 'a push to master' }} in the puppet-master repository.
+            These changes originated from ${{ github.event.client_payload.source_type == 'pr' && format('PR #{0}', github.event.client_payload.source_number) || 'a push to main' }} in the puppet-master repository.
 
             Files synchronized:
             ```
