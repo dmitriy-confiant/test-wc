@@ -61,7 +61,7 @@ jobs:
         id: create-pr
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.REPO_SYNC_PAT }}
           commit-message: Sync JS files from puppet-master
           title: ${{ github.event.client_payload.source_title }} (sync from puppet-master)
           body: |
