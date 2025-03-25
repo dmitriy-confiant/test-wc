@@ -70,7 +70,7 @@ jobs:
         if: steps.changed-files.outputs.any_changed == 'true'
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ secrets.REPO_SYNC_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           repository: dmitriy-confiant/test-pm
           event-type: sync-from-workerclient
           client-payload: |
