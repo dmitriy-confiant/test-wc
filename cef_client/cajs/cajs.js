@@ -6,3 +6,8 @@
     throw new Error("Don't inject into devtools.");
   }
 })();
+
+function testSync() {
+  const test = "testSync";
+  return test;
+}
