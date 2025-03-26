@@ -1,0 +1,86 @@
+name: Sync Files to Puppet-Master
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "cef_client/cajs/cajs.js"
+      - "cef_client/cajs/patch_js_objects.js"
+
+jobs:
+  sync-files:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.state == 'open'
+
+    steps:
+      - name: Checkout workerclient repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+        with:
+          files: |
+            cef_client/cajs/cajs.js
+            cef_client/cajs/patch_js_objects.js
+
+      - name: Checkout puppet-master repo
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/checkout@v3
+        with:
+          repository: dmitriy-confiant/test-pm
+          path: test-pm
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Create sync branch in puppet-master
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          cd puppet-master
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+          SYNC_BRANCH="sync-from-workerclient-${{ github.event.pull_request.head.ref }}-${{ github.event.pull_request.number }}"
+          git checkout -b $SYNC_BRANCH
+
+      - name: Copy changed files to puppet-master
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "Changed files:" > changed_files.txt
+
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            filename=$(basename "$file")
+            echo "Copying $filename..." >> changed_files.txt
+            cp "$file" "puppet-master/cef/cajs/$filename"
+          done
+
+      - name: Create PR in puppet-master
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          cd test-pm
+          git add cef/cajs/
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Sync JS files from workerclient PR #${{ github.event.pull_request.number }}"
+
+          SYNC_BRANCH="sync-from-workerclient-${{ github.event.pull_request.head.ref }}-${{ github.event.pull_request.number }}"
+          git push origin $SYNC_BRANCH
+
+          gh pr create \
+            --title "Sync JS files from workerclient PR #${{ github.event.pull_request.number }}" \
+            --body "This PR syncs JS files from workerclient PR #${{ github.event.pull_request.number }} (${{ github.event.pull_request.html_url }})
+
+            Changes include:
+            $(cat ../changed_files.txt)" \
+            --repo ${{ github.repository_owner }}/puppet-master \
+            --base main \
+            --head $SYNC_BRANCH
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
