@@ -5,15 +5,26 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "cef_client/cajs/cajs.js"
+      - "cef_client/cajs/consentParsing.js"
+      - "cef_client/cajs/emulateDeviceMotion.js"
+      - "cef_client/cajs/emulateDeviceOrientation.js"
+      - "cef_client/cajs/emulateTouch.js"
       - "cef_client/cajs/patch_js_objects.js"
+      - "cef_client/cajs/polyfill-Intl.NumberFormat.js"
+      - "cef_client/cajs/polyfill-ResizeObserver.js"
+      - "cef_client/cajs/polyfill-lite.js"
 
 jobs:
   sync-files:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.state == 'open'
+    permissions:
+      contents: write
+      pull-requests: write
+
+    if: github.event.pull_request.state == 'open' && !contains(github.event.pull_request.title, '[AUTO-SYNC]')
 
     steps:
-      - name: Checkout workerclient repo
+      - name: Checkout puppet-master repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -25,7 +36,14 @@ jobs:
         with:
           files: |
             cef_client/cajs/cajs.js
+            cef_client/cajs/consentParsing.js
+            cef_client/cajs/emulateDeviceMotion.js
+            cef_client/cajs/emulateDeviceOrientation.js
+            cef_client/cajs/emulateTouch.js
             cef_client/cajs/patch_js_objects.js
+            cef_client/cajs/polyfill-Intl.NumberFormat.js
+            cef_client/cajs/polyfill-ResizeObserver.js
+            cef_client/cajs/polyfill-lite.js
 
       - name: Checkout puppet-master repo
         if: steps.changed-files.outputs.any_changed == 'true'
@@ -33,18 +51,37 @@ jobs:
         with:
           repository: dmitriy-confiant/test-pm
           path: test-pm
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.REPO_SYNC_PAT }}
           fetch-depth: 1
 
-      - name: Create sync branch in puppet-master
+      - name: Set sync branch name
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
-          cd puppet-master
+          echo "SYNC_BRANCH=sync-from-workerclient-pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+
+      - name: Check for existing PR
+        if: steps.changed-files.outputs.any_changed == 'true'
+        id: check-pr
+        run: |
+          cd test-pm
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
 
-          SYNC_BRANCH="sync-from-workerclient-${{ github.event.pull_request.head.ref }}-${{ github.event.pull_request.number }}"
-          git checkout -b $SYNC_BRANCH
+          export GH_TOKEN="${{ secrets.REPO_SYNC_PAT }}"
+          PR_EXISTS=$(gh pr list --repo dmitriy-confiant/test-pm --head ${{ env.SYNC_BRANCH }} --json number --jq length)
+
+          if [ "$PR_EXISTS" -gt "0" ]; then
+            echo "PR already exists for this branch."
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+
+            git fetch ${{ env.SYNC_BRANCH }}
+            git checkout ${{ env.SYNC_BRANCH }}
+          else
+            echo "No existing PR found. Creating a new branch."
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+
+            git checkout -b ${{ env.SYNC_BRANCH }}
+          fi
 
       - name: Copy changed files to puppet-master
         if: steps.changed-files.outputs.any_changed == 'true'
@@ -54,10 +91,10 @@ jobs:
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
             filename=$(basename "$file")
             echo "Copying $filename..." >> changed_files.txt
-            cp "$file" "puppet-master/cef/cajs/$filename"
+            cp "$file" "test-pm/cef/cajs/$filename"
           done
 
-      - name: Create PR in puppet-master
+      - name: Update or create PR in puppet-master
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
           cd test-pm
@@ -68,19 +105,22 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Sync JS files from workerclient PR #${{ github.event.pull_request.number }}"
+          git commit -m "Sync JS files from workerclient PR #${{ github.event.pull_request.number }} (Commit: ${{ github.event.pull_request.head.sha }})"
+          git push origin ${{ env.SYNC_BRANCH }} --force
 
-          SYNC_BRANCH="sync-from-workerclient-${{ github.event.pull_request.head.ref }}-${{ github.event.pull_request.number }}"
-          git push origin $SYNC_BRANCH
+          if [ "${{ steps.check-pr.outputs.pr_exists }}" == "true" ]; then
+            echo "Updating existing PR with new changes"
+          else
+            echo "Creating new PR"
+            gh pr create \
+              --title "[AUTO-SYNC] Sync JS files from workerclient PR #${{ github.event.pull_request.number }}" \
+              --body "This PR syncs JS files from workerclient PR: ${{ github.event.pull_request.html_url }}
 
-          gh pr create \
-            --title "Sync JS files from workerclient PR #${{ github.event.pull_request.number }}" \
-            --body "This PR syncs JS files from workerclient PR #${{ github.event.pull_request.number }} (${{ github.event.pull_request.html_url }})
-
-            Changes include:
-            $(cat ../changed_files.txt)" \
-            --repo ${{ github.repository_owner }}/puppet-master \
-            --base main \
-            --head $SYNC_BRANCH
+              Changes include:
+              $(cat ../changed_files.txt)" \
+              --repo dmitriy-confiant/test-pm \
+              --base main \
+              --head ${{ env.SYNC_BRANCH }}
+          fi
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.REPO_SYNC_PAT }}
