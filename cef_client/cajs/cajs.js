@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 (function () {
   if (
     typeof document.URL == "string" &&

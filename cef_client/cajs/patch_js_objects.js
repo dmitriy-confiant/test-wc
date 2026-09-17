@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 (function (originalFunction) {
   window.setTimeout = function setTimeout(...params) {
     var originalResult = originalFunction.call(this, ...params);
