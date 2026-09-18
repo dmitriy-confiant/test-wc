@@ -33,16 +33,24 @@ external dependencies. Run it with:
 python3 server.py
 ```
 
-It listens on port **8000** by default (override with the `PORT` environment
-variable). Endpoints:
+It listens on `127.0.0.1:8000` by default. Endpoints:
 
 | Endpoint | Response |
 | --- | --- |
 | `GET /ping` | `{"service": "test-wc", "status": "ok"}` |
 | `GET /call-pm` | the JSON returned by the puppet-master's `GET /api/ping` |
 
-`/call-pm` calls `test-pm` at `http://127.0.0.1:8001` by default; override with
-the `PM_URL` environment variable.
+`/call-pm` calls `test-pm` at `http://localhost:3000` by default — the port the
+puppet-master's Next.js app listens on.
+
+Configuration is read from the environment:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `HOST` | `127.0.0.1` | interface this server binds to |
+| `PORT` | `8000` | port this server listens on |
+| `PM_BASE_URL` | `http://localhost:3000` | puppet-master base URL (`http`/`https` only) |
+| `PM_TIMEOUT` | `5` | seconds to wait for the puppet-master |
 
 ## Related repositories
 

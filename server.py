@@ -9,19 +9,39 @@ Endpoints:
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SERVICE = "test-wc"
+
+
+def env_number(name, default, parse, description):
+    """Read an environment variable as a number, or exit with a clear message."""
+    raw = os.environ.get(name, default)
+    try:
+        return parse(raw)
+    except ValueError:
+        raise SystemExit(f"{SERVICE}: {name} must be {description}, got {raw!r}")
+
+
+def env_base_url(name, default):
+    """Read a base URL from the environment, rejecting non-http(s) schemes."""
+    raw = os.environ.get(name, default)
+    if urllib.parse.urlsplit(raw).scheme not in ("http", "https"):
+        raise SystemExit(f"{SERVICE}: {name} must be an http:// or https:// URL, got {raw!r}")
+    return raw
+
+
 HOST = os.environ.get("HOST", "127.0.0.1")
-PORT = int(os.environ.get("PORT", "8000"))
-PM_URL = os.environ.get("PM_URL", "http://127.0.0.1:8001")
-PM_TIMEOUT = float(os.environ.get("PM_TIMEOUT", "5"))
+PORT = env_number("PORT", "8000", int, "an integer")
+PM_BASE_URL = env_base_url("PM_BASE_URL", "http://localhost:3000")
+PM_TIMEOUT = env_number("PM_TIMEOUT", "5", float, "a number of seconds")
 
 
 def fetch_pm_ping():
     """Return (status, payload) from the puppet-master's /api/ping."""
-    url = PM_URL.rstrip("/") + "/api/ping"
+    url = PM_BASE_URL.rstrip("/") + "/api/ping"
     try:
         with urllib.request.urlopen(url, timeout=PM_TIMEOUT) as response:
             body = response.read().decode("utf-8")
@@ -44,9 +64,10 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "test-wc/1.0"
 
     def do_GET(self):
-        if self.path == "/ping":
+        path = self.path.split("?", 1)[0].rstrip("/") or "/"
+        if path == "/ping":
             self.respond(200, {"service": SERVICE, "status": "ok"})
-        elif self.path == "/call-pm":
+        elif path == "/call-pm":
             self.respond(*fetch_pm_ping())
         else:
             self.respond(404, {"service": SERVICE, "status": "not_found"})
@@ -62,7 +83,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     server = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"{SERVICE} listening on http://{HOST}:{PORT} (puppet-master: {PM_URL})")
+    print(f"{SERVICE} listening on http://{HOST}:{PORT} (puppet-master: {PM_BASE_URL})")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
