@@ -41,9 +41,9 @@ It listens on `127.0.0.1:8000` by default. Endpoints:
 | `GET /call-pm` | the JSON returned by the puppet-master's `GET /api/ping` |
 
 `/call-pm` calls `test-pm` at `http://localhost:3000` by default — the port its
-Next.js app is expected to use. `test-pm` does not serve `/api/ping` yet (see
-[dmitriy-confiant/test-pm#5](https://github.com/dmitriy-confiant/test-pm/pull/5)),
-so `/call-pm` currently returns a 502 error body.
+Next.js app is expected to use. `test-pm` does not serve `/api/ping` yet — adding
+it is the sibling ticket CC-13, which has no merged pull request — so `/call-pm`
+currently returns a 502 error body.
 
 Configuration is read from the environment:
 

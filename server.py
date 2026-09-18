@@ -111,7 +111,12 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    try:
+        server = ThreadingHTTPServer((HOST, PORT), Handler)
+    except OSError as exc:
+        # Unresolvable HOST, a privileged or occupied PORT: report these the same
+        # way as a bad config value instead of dumping a socket traceback.
+        raise SystemExit(f"{SERVICE}: cannot bind {HOST}:{PORT}: {exc}")
     print(f"{SERVICE} listening on http://{HOST}:{PORT} (puppet-master: {PM_BASE_URL})")
     try:
         server.serve_forever()
