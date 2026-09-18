@@ -16,13 +16,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 SERVICE = "test-wc"
 
 
-def env_number(name, default, parse, description):
+def env_number(name, default, parse, description, in_range=None):
     """Read an environment variable as a number, or exit with a clear message."""
     raw = os.environ.get(name, default)
     try:
-        return parse(raw)
+        value = parse(raw)
     except ValueError:
         raise SystemExit(f"{SERVICE}: {name} must be {description}, got {raw!r}")
+    if in_range is not None and not in_range(value):
+        raise SystemExit(f"{SERVICE}: {name} must be {description}, got {raw!r}")
+    return value
 
 
 def env_base_url(name, default):
@@ -34,9 +37,9 @@ def env_base_url(name, default):
 
 
 HOST = os.environ.get("HOST", "127.0.0.1")
-PORT = env_number("PORT", "8000", int, "an integer")
+PORT = env_number("PORT", "8000", int, "an integer between 0 and 65535", lambda v: 0 <= v <= 65535)
 PM_BASE_URL = env_base_url("PM_BASE_URL", "http://localhost:3000")
-PM_TIMEOUT = env_number("PM_TIMEOUT", "5", float, "a number of seconds")
+PM_TIMEOUT = env_number("PM_TIMEOUT", "5", float, "a positive number of seconds", lambda v: v > 0)
 
 
 def fetch_pm_ping():
@@ -44,7 +47,14 @@ def fetch_pm_ping():
     url = PM_BASE_URL.rstrip("/") + "/api/ping"
     try:
         with urllib.request.urlopen(url, timeout=PM_TIMEOUT) as response:
-            body = response.read().decode("utf-8")
+            body = response.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as exc:
+        return 502, {
+            "service": SERVICE,
+            "status": "error",
+            "upstream_status": exc.code,
+            "error": f"puppet-master returned HTTP {exc.code}: {exc.reason}",
+        }
     except urllib.error.URLError as exc:
         return 502, {"service": SERVICE, "status": "error", "error": str(exc.reason)}
     except OSError as exc:
