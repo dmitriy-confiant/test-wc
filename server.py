@@ -42,11 +42,26 @@ PM_BASE_URL = env_base_url("PM_BASE_URL", "http://localhost:3000")
 PM_TIMEOUT = env_number("PM_TIMEOUT", "5", float, "a positive number of seconds", lambda v: v > 0)
 
 
+class _NoRedirects(urllib.request.HTTPRedirectHandler):
+    """Refuse to follow redirects, so PM_BASE_URL's vetted scheme and host hold.
+
+    Returning None leaves the 3xx unhandled, which urllib turns into an
+    HTTPError — the redirect is reported as an upstream failure rather than
+    silently fetched.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_opener = urllib.request.build_opener(_NoRedirects)
+
+
 def fetch_pm_ping():
     """Return (status, payload) from the puppet-master's /api/ping."""
     url = PM_BASE_URL.rstrip("/") + "/api/ping"
     try:
-        with urllib.request.urlopen(url, timeout=PM_TIMEOUT) as response:
+        with _opener.open(url, timeout=PM_TIMEOUT) as response:
             body = response.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as exc:
         return 502, {
