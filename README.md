@@ -19,9 +19,40 @@ cef_client/
   cajs/
     cajs.js               shared CEF-side script
     patch_js_objects.js   shared JS object patching helpers
+server.py                 minimal stdlib HTTP server
 LICENSE
 README.md
 ```
+
+## HTTP server
+
+`server.py` is a small HTTP server built on the Python standard library — no
+external dependencies. Run it with:
+
+```
+python3 server.py
+```
+
+It listens on `127.0.0.1:8000` by default. Endpoints:
+
+| Endpoint | Response |
+| --- | --- |
+| `GET /ping` | `{"service": "test-wc", "status": "ok"}` |
+| `GET /call-pm` | the JSON returned by the puppet-master's `GET /api/ping` |
+
+`/call-pm` calls `test-pm` at `http://localhost:3000` by default — the port its
+Next.js app is expected to use. `test-pm` does not serve `/api/ping` yet — adding
+it is the sibling ticket CC-13, which has no merged pull request — so `/call-pm`
+currently returns a 502 error body.
+
+Configuration is read from the environment:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `HOST` | `127.0.0.1` | interface this server binds to |
+| `PORT` | `8000` | port this server listens on |
+| `PM_BASE_URL` | `http://localhost:3000` | puppet-master base URL (`http`/`https` only) |
+| `PM_TIMEOUT` | `5` | seconds to wait for the puppet-master |
 
 ## Related repositories
 
