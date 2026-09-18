@@ -36,7 +36,7 @@ def env_base_url(name, default):
     return raw
 
 
-HOST = os.environ.get("HOST", "127.0.0.1")
+HOST = os.environ.get("HOST") or "127.0.0.1"
 PORT = env_number("PORT", "8000", int, "an integer between 0 and 65535", lambda v: 0 <= v <= 65535)
 PM_BASE_URL = env_base_url("PM_BASE_URL", "http://localhost:3000")
 PM_TIMEOUT = env_number("PM_TIMEOUT", "5", float, "a positive number of seconds", lambda v: v > 0)
@@ -57,8 +57,12 @@ def fetch_pm_ping():
         }
     except urllib.error.URLError as exc:
         return 502, {"service": SERVICE, "status": "error", "error": str(exc.reason)}
-    except OSError as exc:
-        return 502, {"service": SERVICE, "status": "error", "error": str(exc)}
+    except Exception as exc:
+        # Deliberately broad: urlopen/read can raise OSError, http.client.HTTPException
+        # (IncompleteRead, InvalidURL) and UnicodeDecodeError, which share no common
+        # base. Whatever goes wrong upstream, the client gets the documented 502 body
+        # instead of a traceback and a dropped connection.
+        return 502, {"service": SERVICE, "status": "error", "error": str(exc) or type(exc).__name__}
 
     try:
         return 200, json.loads(body)
