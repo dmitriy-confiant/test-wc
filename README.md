@@ -24,6 +24,19 @@ LICENSE
 README.md
 ```
 
+## Running the server
+
+Start the server with:
+
+```
+python3 server.py
+```
+
+Endpoints:
+
+- `GET /ping` — health check for this service.
+- `GET /call-pm` — proxies the puppet-master's `GET /api/ping` and returns its JSON.
+
 ## HTTP server
 
 `server.py` is a small HTTP server built on the Python standard library — no
