@@ -24,7 +24,7 @@ LICENSE
 README.md
 ```
 
-## HTTP server
+## Running the server
 
 `server.py` is a small HTTP server built on the Python standard library — no
 external dependencies. Run it with:
@@ -35,10 +35,10 @@ python3 server.py
 
 It listens on `127.0.0.1:8000` by default. Endpoints:
 
-| Endpoint | Response |
-| --- | --- |
-| `GET /ping` | `{"service": "test-wc", "status": "ok"}` |
-| `GET /call-pm` | the JSON returned by the puppet-master's `GET /api/ping` |
+- `GET /ping` — health check for this service; returns
+  `{"service": "test-wc", "status": "ok"}`.
+- `GET /call-pm` — proxies the puppet-master's `GET /api/ping` and returns its
+  JSON.
 
 `/call-pm` calls `test-pm` at `http://localhost:3000` by default — the port its
 Next.js app is expected to use. `test-pm` does not serve `/api/ping` yet — adding
