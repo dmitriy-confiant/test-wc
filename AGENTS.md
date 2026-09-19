@@ -25,16 +25,18 @@ and configuration under **HTTP server**, and the state of the tooling under
 
 ## Working conventions
 
-- **Read `README.md` first.** It is the source of truth for repo layout, for the
-  server's behaviour, and for the current state of the sync pipeline. Point at
-  it rather than restating its details here or in new files, so the two cannot
-  drift apart.
+- **Read `README.md` first.** It is the source of truth for repo layout and for
+  the server's behaviour. Point at it rather than restating its details here or
+  in new files, so the two cannot drift apart.
 - **Edit `cajs` scripts in `test-pm`, not here.** `cef_client/cajs/` holds
   mirrored copies; the canonical ones live in the puppet-master repo. Expect
   incoming automated pull requests against this directory.
-- **Do not assume mirroring happened.** Sync is driven from the `test-pm` side
-  and is not reliably working end to end. Check `test-pm` before treating a
-  `cajs` file here as current.
+- **Do not assume mirroring happened.** Sync is driven from the `test-pm` side,
+  and `test-pm`'s own `CLAUDE.md` and `README.md` record both sync workflows as
+  currently non-functional, with mirroring done manually. This repo's
+  `README.md` overstates the case under **Related repositories**, saying changes
+  in `test-pm` "are propagated" here by the sync workflows. Check `test-pm`
+  before treating a `cajs` file here as current.
 - **The `cajs` scripts are injected into a CEF page, not run under Node.** They
   are IIFEs that lean on browser globals (`window`, `document`) and the
   host-provided `cajsNoodle` object. There are no imports and no module system —
