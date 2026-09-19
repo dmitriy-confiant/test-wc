@@ -29,8 +29,9 @@ and configuration under **HTTP server**, and the state of the tooling under
   the server's behaviour. Point at it rather than restating its details here or
   in new files, so the two cannot drift apart.
 - **Edit `cajs` scripts in `test-pm`, not here.** `cef_client/cajs/` holds
-  mirrored copies; the canonical ones live in the puppet-master repo. Expect
-  incoming automated pull requests against this directory.
+  mirrored copies; the canonical ones live in the puppet-master repo. No
+  automated pull requests arrive today: `test-pm`'s sync dispatch is a no-op
+  because nothing here listens for it, so mirror changes by hand.
 - **Do not assume mirroring happened.** Sync is driven from the `test-pm` side,
   and `test-pm`'s own `CLAUDE.md` and `README.md` record both sync workflows as
   currently non-functional, with mirroring done manually. This repo's
