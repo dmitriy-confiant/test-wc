@@ -77,3 +77,7 @@ Practically, that means:
 
 There is no build, no dependency manifest, and no test suite. Clone it, edit the
 files, open a pull request.
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE) for the full text.
